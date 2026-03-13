@@ -1,0 +1,103 @@
+name: Build Services
+
+on:
+  workflow_call:
+    outputs:
+      video-processor-image:
+        value: ${{ jobs.containers.outputs.video-processor }}
+      video-manager-image:
+        value: ${{ jobs.containers.outputs.video-manager }}
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      video-processor: ${{ steps.changes.outputs.video-processor }}
+      video-manager: ${{ steps.changes.outputs.video-manager }}
+    steps:
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Detect Changes
+        id: changes
+        run: |
+          if aws ecr describe-images --repository-name fiapx-video-worker --region us-east-1 --image-ids imageTag=${{ github.sha }} 2>/dev/null; then
+            echo "video-processor=false" >> $GITHUB_OUTPUT
+          else
+            echo "video-processor=true" >> $GITHUB_OUTPUT
+          fi
+
+          if aws ecr describe-images --repository-name fiapx-video-manager --region us-east-1 --image-ids imageTag=${{ github.sha }} 2>/dev/null; then
+            echo "video-manager=false" >> $GITHUB_OUTPUT
+          else
+            echo "video-manager=true" >> $GITHUB_OUTPUT
+          fi
+
+  containers:
+    name: Container Images
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    outputs:
+      video-processor: ${{ steps.images.outputs.video-processor }}
+      video-manager: ${{ steps.images.outputs.video-manager }}
+
+    steps:
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # --- VIDEO PROCESSOR ---
+      - name: Checkout Video Processor
+        if: needs.detect-changes.outputs.video-processor == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/fiap-x-microsservice-video-processor
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: video-processor
+
+      - name: Build & Push Video Processor
+        if: needs.detect-changes.outputs.video-processor == 'true'
+        run: |
+          docker build -t ${{ steps.ecr.outputs.registry }}/fiapx-video-worker:${{ github.sha }} \
+                        -t ${{ steps.ecr.outputs.registry }}/fiapx-video-worker:latest \
+                        ./video-processor
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-video-worker:${{ github.sha }}
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-video-worker:latest
+
+      # --- VIDEO MANAGER ---
+      - name: Checkout Video Manager
+        if: needs.detect-changes.outputs.video-manager == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/fiap-x-microsservice-video-manager
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: video-manager
+
+      - name: Build & Push Video Manager
+        if: needs.detect-changes.outputs.video-manager == 'true'
+        run: |
+          docker build -t ${{ steps.ecr.outputs.registry }}/fiapx-video-manager:${{ github.sha }} \
+                        -t ${{ steps.ecr.outputs.registry }}/fiapx-video-manager:latest \
+                        ./video-manager
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-video-manager:${{ github.sha }}
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-video-manager:latest
+
+      - name: Set Image Outputs
+        id: images
+        run: |
+          REGISTRY=${{ steps.ecr.outputs.registry }}
+          SHA=${{ github.sha }}
+          echo "video-processor=${REGISTRY}/fiapx-video-worker:${SHA}" >> $GITHUB_OUTPUT
+          echo "video-manager=${REGISTRY}/fiapx-video-manager:${SHA}" >> $GITHUB_OUTPUT

@@ -1,0 +1,82 @@
+name: Deploy Video Platform
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/_build.yml
+    secrets: inherit
+
+  infra:
+    name: Get Infrastructure
+    runs-on: ubuntu-latest
+    outputs:
+      eks-cluster: ${{ steps.tf.outputs.eks_cluster_name }}
+      sqs-queue-url: ${{ steps.tf.outputs.sqs_queue_url }}
+      s3-bucket-name: ${{ steps.tf.outputs.s3_bucket_name }}
+      rds-endpoint: ${{ steps.tf.outputs.rds_endpoint }}
+      rds-secret-arn: ${{ steps.tf.outputs.rds_secret_arn }}
+      redis-endpoint: ${{ steps.tf.outputs.redis_endpoint }}
+      video-processor-role: ${{ steps.tf.outputs.video_processor_role_arn }}
+      video-manager-role: ${{ steps.tf.outputs.video_manager_role_arn }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+          terraform_wrapper: false
+
+      - name: Terraform Init & Output
+        id: tf
+        working-directory: terraform
+        run: |
+          terraform init
+          for output in eks_cluster_name sqs_queue_url s3_bucket_name rds_endpoint rds_secret_arn redis_endpoint video_processor_role_arn video_manager_role_arn; do
+            echo "${output}=$(terraform output -raw ${output})" >> $GITHUB_OUTPUT
+          done
+
+  deploy-video-manager:
+    name: Deploy Video Manager
+    needs: [build, infra]
+    uses: ./.github/workflows/_deploy-video-manager.yml
+    with:
+      video-manager-image: ${{ needs.build.outputs.video-manager-image }}
+      eks-cluster: ${{ needs.infra.outputs.eks-cluster }}
+      video-manager-role: ${{ needs.infra.outputs.video-manager-role }}
+      rds-endpoint: ${{ needs.infra.outputs.rds-endpoint }}
+      rds-secret-arn: ${{ needs.infra.outputs.rds-secret-arn }}
+      s3-bucket-name: ${{ needs.infra.outputs.s3-bucket-name }}
+    secrets: inherit
+
+  deploy-video-processor:
+    name: Deploy Video Processor
+    needs: [build, infra, deploy-video-manager]
+    uses: ./.github/workflows/_deploy-video-processor.yml
+    with:
+      video-processor-image: ${{ needs.build.outputs.video-processor-image }}
+      eks-cluster: ${{ needs.infra.outputs.eks-cluster }}
+      video-processor-role: ${{ needs.infra.outputs.video-processor-role }}
+      sqs-queue-url: ${{ needs.infra.outputs.sqs-queue-url }}
+      redis-endpoint: ${{ needs.infra.outputs.redis-endpoint }}
+    secrets: inherit
+
+  smoke-tests:
+    name: Smoke Tests
+    needs: [deploy-video-manager, deploy-video-processor]
+    uses: ./.github/workflows/_smoke-tests.yml
+    with:
+      manager-url: ${{ needs.deploy-video-manager.outputs.manager-url }}
+    secrets: inherit

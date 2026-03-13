@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: video-processor
+  namespace: default
+  labels:
+    app: video-processor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: video-processor
+  template:
+    metadata:
+      labels:
+        app: video-processor
+    spec:
+      serviceAccountName: video-processor-sa
+      containers:
+      - name: video-processor
+        image: ${VIDEO_PROCESSOR_IMAGE}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "3Gi"
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: Aws__Region
+          value: "us-east-1"
+        - name: Aws__SqsQueueUrl
+          value: ${SQS_QUEUE_URL}
+        - name: VideoManager__BaseUrl
+          value: "http://video-manager:80"
+        - name: Redis__ConnectionString
+          value: ${REDIS_ENDPOINT}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: video-processor
+  namespace: default
+  labels:
+    app: video-processor
+spec:
+  selector:
+    app: video-processor
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: video-processor-sa
+  namespace: default
+  annotations:
+    eks.amazonaws.com/role-arn: ${VIDEO_PROCESSOR_ROLE_ARN}

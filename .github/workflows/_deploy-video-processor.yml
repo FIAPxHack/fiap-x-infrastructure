@@ -1,0 +1,65 @@
+name: Deploy Video Processor
+
+on:
+  workflow_call:
+    inputs:
+      video-processor-image:
+        required: true
+        type: string
+      eks-cluster:
+        required: true
+        type: string
+      video-processor-role:
+        required: true
+        type: string
+      sqs-queue-url:
+        required: true
+        type: string
+      redis-endpoint:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy Video Processor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configurando kubectl
+        run: aws eks update-kubeconfig --region us-east-1 --name ${{ inputs.eks-cluster }}
+
+      - name: Verificando Imagem
+        run: |
+          aws ecr describe-images \
+            --repository-name fiapx-video-worker \
+            --image-ids imageTag=$(echo "${{ inputs.video-processor-image }}" | cut -d':' -f2) \
+            --region us-east-1
+          echo "✅ Imagem verificada"
+
+      - name: Deploy Video Processor
+        env:
+          VIDEO_PROCESSOR_IMAGE: ${{ inputs.video-processor-image }}
+          VIDEO_PROCESSOR_ROLE_ARN: ${{ inputs.video-processor-role }}
+          SQS_QUEUE_URL: ${{ inputs.sqs-queue-url }}
+          REDIS_ENDPOINT: ${{ inputs.redis-endpoint }}
+        run: envsubst < k8s/video-processor-deployment.yaml | kubectl apply -f -
+
+      - name: Deploy HPA
+        run: kubectl apply -f k8s/hpa.yaml
+
+      - name: Aguardando Rollout
+        run: kubectl rollout status deployment/video-processor --timeout=300s
+
+      - name: Verificando Implantação
+        run: |
+          echo "✅ Video Processor implantado com sucesso"
+          kubectl get pods -l app=video-processor
+          kubectl get svc video-processor
