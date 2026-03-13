@@ -28,6 +28,7 @@ output "rds_endpoint" {
 
 output "rds_secret_arn" {
   value     = aws_db_instance.manager.master_user_secret[0].secret_arn
+  sensitive = false
 }
 
 output "redis_endpoint" {
