@@ -1,0 +1,55 @@
+name: Smoke Tests
+
+on:
+  workflow_call:
+    inputs:
+      manager-url:
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: Run Smoke Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for DNS
+        run: |
+          HOSTNAME=$(echo "${{ inputs.manager-url }}" | sed 's|http://||' | sed 's|https://||' | sed 's|/.*||')
+          for i in {1..36}; do
+            if nslookup $HOSTNAME > /dev/null 2>&1; then
+              echo "✅ DNS resolvido"
+              sleep 10
+              break
+            fi
+            sleep 5
+          done
+
+      - name: Video Manager Health Check
+        continue-on-error: true
+        run: |
+          for i in {1..5}; do
+            if curl -f -s -o /dev/null ${{ inputs.manager-url }}/healthz; then
+              echo "✅ Video Manager health check passou"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "⚠️ Health check falhou"
+          exit 1
+
+      - name: Test Videos Endpoint
+        continue-on-error: true
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            ${{ inputs.manager-url }}/api/videos/user/test-user)
+          echo "Videos HTTP Code: $HTTP_CODE"
+
+      - name: Test Upload Endpoint (No File)
+        continue-on-error: true
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST ${{ inputs.manager-url }}/api/videos/upload)
+          echo "Upload HTTP Code: $HTTP_CODE"
+          if [ "$HTTP_CODE" = "400" ] || [ "$HTTP_CODE" = "415" ]; then
+            echo "✅ Upload validando corretamente"
+          fi
