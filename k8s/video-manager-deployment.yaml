@@ -74,6 +74,10 @@ metadata:
   namespace: default
   labels:
     app: video-manager
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: video-manager

@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fiap-x-user
+  namespace: default
+  labels:
+    app: fiap-x-user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fiap-x-user
+  template:
+    metadata:
+      labels:
+        app: fiap-x-user
+    spec:
+      serviceAccountName: fiap-x-user-sa
+      containers:
+        - name: fiap-x-user
+          image: ${USER_IMAGE}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+              name: http
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: DB_HOST
+              value: ${USER_DB_ENDPOINT}
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "db_fiap_x_user"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "admin"
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fiap-x-user-db-secret
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_SECRET
+            - name: JWT_ISSUER
+              value: "fiap-x"
+            - name: JWT_AUDIENCE
+              value: "fip-x-users"
+            - name: S3__BucketName
+              value: ${S3_BUCKET_NAME}
+            - name: S3__UseMinIO
+              value: "false"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fiap-x-user
+  namespace: default
+  labels:
+    app: fiap-x-user
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+spec:
+  selector:
+    app: fiap-x-user
+  ports:
+    - port: 80
+      targetPort: 8081
+      protocol: TCP
+      name: http
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fiap-x-user-sa
+  namespace: default
+  annotations:
+    eks.amazonaws.com/role-arn: ${USER_ROLE_ARN}

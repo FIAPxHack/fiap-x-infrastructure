@@ -65,6 +65,10 @@ metadata:
   namespace: default
   labels:
     app: video-processor
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: video-processor
