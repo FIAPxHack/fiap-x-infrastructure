@@ -1,0 +1,99 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: video-manager-monitor
+  namespace: monitoring        # deve ficar no namespace do Prometheus
+  labels:
+    release: kube-prometheus   # deve bater com o nome do helm_release do Prometheus
+spec:
+  selector:
+    matchLabels:
+      app: video-manager       # seleciona o Service do video-manager
+  namespaceSelector:
+    matchNames:
+      - default                # namespace onde a aplicação roda
+  endpoints:
+    - port: http               # nome da porta definida no Service (port name: http)
+      path: /metrics           # endpoint que a aplicação expõe as métricas
+      interval: 30s            # frequência de coleta
+
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: video-processor-monitor
+  namespace: monitoring
+  labels:
+    release: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: video-processor
+  namespaceSelector:
+    matchNames:
+      - default
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+
+---
+
+# ==========================================
+# PROMETHEUS RULES — Alertas
+# ==========================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fiapx-video-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus
+spec:
+  groups:
+    - name: video-manager.rules
+      rules:
+        - alert: VideoManagerDown
+          expr: up{job="video-manager"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "video-manager está fora do ar"
+            description: "O pod video-manager não está respondendo há mais de 1 minuto."
+
+        - alert: VideoManagerHighMemory
+          expr: |
+            container_memory_working_set_bytes{namespace="default", pod=~"video-manager.*"}
+            / container_spec_memory_limit_bytes{namespace="default", pod=~"video-manager.*"} > 0.85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "video-manager com memória alta"
+            description: "Uso de memória acima de 85% por mais de 5 minutos."
+
+    - name: video-processor.rules
+      rules:
+        - alert: VideoProcessorDown
+          expr: up{job="video-processor"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "video-processor está fora do ar"
+            description: "O pod video-processor não está respondendo há mais de 1 minuto."
+
+        - alert: VideoProcessorHighCPU
+          expr: |
+            rate(container_cpu_usage_seconds_total{namespace="default", pod=~"video-processor.*"}[5m])
+            / container_spec_cpu_quota{namespace="default", pod=~"video-processor.*"} * 100000 > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "video-processor com CPU alta"
+            description: "Uso de CPU acima de 80% por mais de 5 minutos."
+
