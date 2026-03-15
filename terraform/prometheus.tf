@@ -20,7 +20,7 @@ resource "helm_release" "prometheus" {
       grafana = {
         enabled = true
 
-        adminPassword = var.grafana_admin_password
+        adminPassword = random_password.grafana_admin.result
 
         # Persistência para não perder dashboards ao reiniciar o pod
         persistence = {

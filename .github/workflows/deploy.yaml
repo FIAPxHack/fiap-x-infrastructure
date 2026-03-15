@@ -80,9 +80,49 @@ jobs:
       redis-endpoint: ${{ needs.infra.outputs.redis-endpoint }}
     secrets: inherit
 
+  deploy-user:
+    name: Deploy User
+    needs: [build, infra]
+    uses: ./.github/workflows/_deploy-user.yml
+    with:
+      user-image: ${{ needs.build.outputs.user-image }}
+      eks-cluster: ${{ needs.infra.outputs.eks-cluster }}
+      rds-endpoint: ${{ steps.tf.outputs.rds_user_endpoint }}
+      rds-secret-arn: ${{ steps.tf.outputs.rds_user_secret_arn }}
+    secrets: inherit
+
+    deploy-auth:
+    name: Deploy Auth
+    needs: [build, infra]
+    uses: ./.github/workflows/_deploy-auth.yml
+    with:
+      auth-image: ${{ needs.build.outputs.auth-image }}
+      eks-cluster: ${{ needs.infra.outputs.eks-cluster }}
+      rds-endpoint: ${{ needs.infra.outputs.rds_auth_endpoint }}
+      rds-secret-arn: ${{ needs.infra.outputs.rds_auth_secret_arn }}
+    secrets: inherit
+
+  deploy-notification:
+    name: Deploy Notification
+    needs: [build, infra]
+    uses: ./.github/workflows/_deploy-notification.yml
+    with:
+      notification-image: ${{ needs.build.outputs.notification-image }}
+      eks-cluster: ${{ needs.infra.outputs.eks-cluster }}
+    secrets: inherit
+
+  deploy-api-gateway:
+    name: Deploy API Gateway
+    needs: [build, infra]
+    uses: ./.github/workflows/_deploy-api-gateway.yml
+    with:
+      api-gateway-image: ${{ needs.build.outputs.api-gateway-image }}
+      eks-cluster: ${{ needs.infra.outputs.eks-cluster }}
+    secrets: inherit
+
   smoke-tests:
     name: Smoke Tests
-    needs: [deploy-video-manager, deploy-video-processor]
+    needs: [deploy-video-manager, deploy-video-processor, deploy-user, deploy-auth, deploy-notification, deploy-api-gateway]
     uses: ./.github/workflows/_smoke-tests.yml
     with:
       manager-url: ${{ needs.deploy-video-manager.outputs.manager-url }}
