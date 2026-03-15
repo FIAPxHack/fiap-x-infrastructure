@@ -123,3 +123,9 @@ resource "aws_iam_openid_connect_provider" "eks" {
     Environment = var.environment
   }
 }
+
+resource "aws_eks_addon" "ebs_csi" {
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "aws-ebs-csi-driver"
+  addon_version = "v1.30.0-eksbuild.1"
+}
