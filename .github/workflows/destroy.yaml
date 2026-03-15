@@ -62,6 +62,10 @@ jobs:
         run: |
           aws ecr delete-repository --repository-name fiapx-video-worker --force || true
           aws ecr delete-repository --repository-name fiapx-video-manager --force || true
+          aws ecr delete-repository --repository-name fiapx-user --force || true
+          aws ecr delete-repository --repository-name fiapx-auth --force || true
+          aws ecr delete-repository --repository-name fiapx-notification --force || true
+          aws ecr delete-repository --repository-name fiapx-api-gateway --force || true
 
       - name: Terraform Destroy
         working-directory: terraform

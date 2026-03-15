@@ -125,7 +125,7 @@ jobs:
 
   deploy-api-gateway:
     name: Deploy API Gateway
-    needs: [build, infra]
+    needs: [build, infra, deploy-video-manager, deploy-video-processor, deploy-user, deploy-auth, deploy-notification]
     uses: ./.github/workflows/_deploy-api-gateway.yml
     with:
       api-gateway-image: ${{ needs.build.outputs.api-gateway-image }}
@@ -134,7 +134,7 @@ jobs:
 
   smoke-tests:
     name: Smoke Tests
-    needs: [deploy-video-manager, deploy-video-processor, deploy-user, deploy-auth, deploy-notification, deploy-api-gateway]
+    needs: [deploy-api-gateway]
     uses: ./.github/workflows/_smoke-tests.yml
     with:
       manager-url: ${{ needs.deploy-video-manager.outputs.manager-url }}

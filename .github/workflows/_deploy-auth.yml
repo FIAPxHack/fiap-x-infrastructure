@@ -71,6 +71,9 @@ jobs:
           S3_BUCKET_NAME: ${{ inputs.s3-bucket-name }}
         run: envsubst < k8s/auth-deployment.yaml | kubectl apply -f -
 
+      - name: Deploy HPA
+        run: kubectl apply -f k8s/hpa.yaml
+
       - name: Aguardando Rollout
         run: kubectl rollout status deployment/fiap-x-auth --timeout=300s
 
