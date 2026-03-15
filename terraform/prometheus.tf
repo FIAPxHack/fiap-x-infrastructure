@@ -26,7 +26,7 @@ resource "helm_release" "prometheus" {
         persistence = {
           enabled      = true
           storageClass = "gp2"
-          size         = "5Gi"
+          size         = "512Mi"
         }
 
         # Expõe o Grafana via LoadBalancer para acesso externo
@@ -36,8 +36,8 @@ resource "helm_release" "prometheus" {
 
         # Recursos adequados para t3.small
         resources = {
-          requests = { cpu = "100m", memory = "128Mi" }
-          limits   = { cpu = "300m", memory = "256Mi" }
+          requests = { cpu = "50m", memory = "64Mi" }
+          limits   = { cpu = "100m", memory = "128Mi" }
         }
 
         # Data source do Loki pré-configurado
@@ -56,8 +56,8 @@ resource "helm_release" "prometheus" {
       # ==========================================
       prometheus = {
         prometheusSpec = {
-          # Retenção de 15 dias de métricas
-          retention = "15d"
+          # Retenção de 1 dia de métricas
+          retention = "1d"
 
           # Persistência do Prometheus no EBS
           storageSpec = {
@@ -66,7 +66,7 @@ resource "helm_release" "prometheus" {
                 storageClassName = "gp2"
                 accessModes      = ["ReadWriteOnce"]
                 resources = {
-                  requests = { storage = "20Gi" }
+                  requests = { storage = "512Mi" }
                 }
               }
             }
@@ -74,8 +74,8 @@ resource "helm_release" "prometheus" {
 
           # Recursos adequados para t3.small
           resources = {
-            requests = { cpu = "100m", memory = "256Mi" }
-            limits   = { cpu = "300m", memory = "512Mi" }
+            requests = { cpu = "50m", memory = "128Mi" }
+            limits   = { cpu = "100m", memory = "256Mi" }
           }
 
           # Permite descobrir ServiceMonitors de qualquer namespace
@@ -90,8 +90,8 @@ resource "helm_release" "prometheus" {
       alertmanager = {
         alertmanagerSpec = {
           resources = {
-            requests = { cpu = "50m", memory = "64Mi" }
-            limits   = { cpu = "100m", memory = "128Mi" }
+            requests = { cpu = "25m", memory = "32Mi" }
+            limits   = { cpu = "50m", memory = "64Mi" }
           }
         }
       }
