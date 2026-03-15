@@ -6,41 +6,34 @@ resource "helm_release" "prometheus" {
   namespace        = "monitoring"
   create_namespace = true
 
-  # Aguarda os nodes estarem prontos antes de instalar
-  depends_on = [aws_eks_node_group.main]
+  # Aguarda os nodes E o EBS CSI driver estarem prontos
+  depends_on = [aws_eks_node_group.main, aws_eks_addon.ebs_csi]
 
   # Tempo máximo de espera para o deploy estabilizar
   timeout = 900
 
   values = [
     yamlencode({
-      # ==========================================
-      # GRAFANA
-      # ==========================================
       grafana = {
         enabled = true
 
         adminPassword = random_password.grafana_admin.result
 
-        # Persistência para não perder dashboards ao reiniciar o pod
         persistence = {
           enabled      = true
           storageClass = "gp2"
           size         = "512Mi"
         }
 
-        # Expõe o Grafana via LoadBalancer para acesso externo
         service = {
           type = "LoadBalancer"
         }
 
-        # Recursos adequados para t3.small
         resources = {
           requests = { cpu = "50m", memory = "64Mi" }
           limits   = { cpu = "100m", memory = "128Mi" }
         }
 
-        # Data source do Loki pré-configurado
         additionalDataSources = [
           {
             name   = "Loki"
@@ -51,15 +44,10 @@ resource "helm_release" "prometheus" {
         ]
       }
 
-      # ==========================================
-      # PROMETHEUS
-      # ==========================================
       prometheus = {
         prometheusSpec = {
-          # Retenção de 1 dia de métricas
           retention = "1d"
 
-          # Persistência do Prometheus no EBS
           storageSpec = {
             volumeClaimTemplate = {
               spec = {
@@ -72,21 +60,16 @@ resource "helm_release" "prometheus" {
             }
           }
 
-          # Recursos adequados para t3.small
           resources = {
             requests = { cpu = "50m", memory = "128Mi" }
             limits   = { cpu = "100m", memory = "256Mi" }
           }
 
-          # Permite descobrir ServiceMonitors de qualquer namespace
           serviceMonitorSelectorNilUsesHelmValues = false
           podMonitorSelectorNilUsesHelmValues     = false
         }
       }
 
-      # ==========================================
-      # ALERTMANAGER
-      # ==========================================
       alertmanager = {
         alertmanagerSpec = {
           resources = {

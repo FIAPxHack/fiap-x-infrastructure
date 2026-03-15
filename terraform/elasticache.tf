@@ -24,22 +24,22 @@ resource "aws_security_group" "redis" {
   }
 }
 
-resource "aws_elasticache_serverless_cache" "redis" {
-  engine = "redis"
-  name   = "${var.project_name}-redis-${var.environment}"
+resource "aws_elasticache_subnet_group" "redis" {
+  name       = "${var.project_name}-redis-subnet-${var.environment}"
+  subnet_ids = data.aws_subnets.default.ids
+}
 
-  cache_usage_limits {
-    data_storage {
-      maximum = 1
-      unit    = "GB"
-    }
-    ecpu_per_second {
-      maximum = 1000
-    }
-  }
+resource "aws_elasticache_cluster" "redis" {
+  cluster_id           = "${var.project_name}-redis-${var.environment}"
+  engine               = "redis"
+  engine_version       = "7.1"
+  node_type            = "cache.t3.micro"
+  num_cache_nodes      = 1
+  port                 = 6379
+  parameter_group_name = "default.redis7"
 
+  subnet_group_name  = aws_elasticache_subnet_group.redis.name
   security_group_ids = [aws_security_group.redis.id]
-  subnet_ids         = data.aws_subnets.default.ids
 
   tags = {
     Name        = "${var.project_name}-redis-${var.environment}"

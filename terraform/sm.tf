@@ -4,7 +4,8 @@ resource "random_password" "grafana_admin" {
 }
 
 resource "aws_secretsmanager_secret" "grafana_admin" {
-  name = "${var.project_name}-grafana-admin-password"
+  name                    = "${var.project_name}-grafana-admin-password"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "grafana_admin" {
