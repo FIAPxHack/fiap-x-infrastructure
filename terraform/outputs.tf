@@ -58,3 +58,15 @@ output "video_processor_role_arn" {
 output "video_manager_role_arn" {
   value = aws_iam_role.video_manager.arn
 }
+
+output "user_role_arn" {
+  value = aws_iam_role.user.arn
+}
+
+output "auth_role_arn" {
+  value = aws_iam_role.auth.arn
+}
+
+output "notification_role_arn" {
+  value = aws_iam_role.notification.arn
+}

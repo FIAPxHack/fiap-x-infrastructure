@@ -1,0 +1,56 @@
+name: Deploy API Gateway
+
+on:
+  workflow_call:
+    inputs:
+      api-gateway-image:
+        required: true
+        type: string
+      eks-cluster:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy API Gateway
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configurando kubectl
+        run: aws eks update-kubeconfig --region us-east-1 --name ${{ inputs.eks-cluster }}
+
+      - name: Verificando Imagem
+        run: |
+          aws ecr describe-images \
+            --repository-name fiapx-api-gateway \
+            --image-ids imageTag=$(echo "${{ inputs.api-gateway-image }}" | cut -d':' -f2) \
+            --region us-east-1
+          echo "Imagem verificada"
+
+      - name: Criando Gateway Secrets
+        run: |
+          kubectl create secret generic gateway-secrets \
+            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy API Gateway
+        env:
+          GATEWAY_IMAGE: ${{ inputs.api-gateway-image }}
+        run: envsubst < k8s/gateway-deployment.yaml | kubectl apply -f -
+
+      - name: Aguardando Rollout
+        run: kubectl rollout status deployment/api-gateway --timeout=300s
+
+      - name: Verificando Implantacao
+        run: |
+          echo "API Gateway implantado com sucesso"
+          kubectl get pods -l app=api-gateway
+          kubectl get svc api-gateway

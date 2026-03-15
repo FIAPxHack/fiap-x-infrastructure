@@ -1,0 +1,54 @@
+name: Deploy Notification
+
+on:
+  workflow_call:
+    inputs:
+      notification-image:
+        required: true
+        type: string
+      eks-cluster:
+        required: true
+        type: string
+      notification-role:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy Notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configurando kubectl
+        run: aws eks update-kubeconfig --region us-east-1 --name ${{ inputs.eks-cluster }}
+
+      - name: Verificando Imagem
+        run: |
+          aws ecr describe-images \
+            --repository-name fiapx-notification \
+            --image-ids imageTag=$(echo "${{ inputs.notification-image }}" | cut -d':' -f2) \
+            --region us-east-1
+          echo "Imagem verificada"
+
+      - name: Deploy Notification
+        env:
+          NOTIFICATION_IMAGE: ${{ inputs.notification-image }}
+          NOTIFICATION_ROLE_ARN: ${{ inputs.notification-role }}
+        run: envsubst < k8s/notification-deployment.yaml | kubectl apply -f -
+
+      - name: Aguardando Rollout
+        run: kubectl rollout status deployment/fiap-x-notification --timeout=300s
+
+      - name: Verificando Implantacao
+        run: |
+          echo "Notification implantado com sucesso"
+          kubectl get pods -l app=fiap-x-notification
+          kubectl get svc fiap-x-notification
