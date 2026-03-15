@@ -31,8 +31,8 @@ resource "helm_release" "loki" {
         }
 
         resources = {
-          requests = { cpu = "100m", memory = "128Mi" }
-          limits   = { cpu = "300m", memory = "512Mi" }
+          requests = { cpu = "25m", memory = "64Mi" }
+          limits   = { cpu = "100m", memory = "128Mi" }
         }
       }
 
@@ -40,8 +40,8 @@ resource "helm_release" "loki" {
         enabled = true
 
         resources = {
-          requests = { cpu = "50m", memory = "64Mi" }
-          limits   = { cpu = "100m", memory = "128Mi" }
+          requests = { cpu = "10m", memory = "32Mi" }
+          limits   = { cpu = "50m", memory = "64Mi" }
         }
 
         config = {

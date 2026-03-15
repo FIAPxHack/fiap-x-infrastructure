@@ -7,6 +7,8 @@ metadata:
     app: fiap-x-notification
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: fiap-x-notification
@@ -25,11 +27,11 @@ spec:
           name: http
         resources:
           requests:
-            cpu: "100m"
-            memory: "256Mi"
+            cpu: "50m"
+            memory: "128Mi"
           limits:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "250m"
+            memory: "256Mi"
         env:
         - name: ASPNETCORE_ENVIRONMENT
           value: "Production"
