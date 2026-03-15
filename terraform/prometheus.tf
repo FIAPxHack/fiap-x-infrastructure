@@ -6,11 +6,10 @@ resource "helm_release" "prometheus" {
   namespace        = "monitoring"
   create_namespace = true
 
-  # Aguarda os nodes E o EBS CSI driver estarem prontos
-  depends_on = [aws_eks_node_group.main, aws_eks_addon.ebs_csi]
+  depends_on = [aws_eks_node_group.main]
 
-  # Tempo máximo de espera para o deploy estabilizar
   timeout = 900
+  wait    = false
 
   values = [
     yamlencode({
@@ -20,13 +19,11 @@ resource "helm_release" "prometheus" {
         adminPassword = random_password.grafana_admin.result
 
         persistence = {
-          enabled      = true
-          storageClass = "gp2"
-          size         = "512Mi"
+          enabled = false
         }
 
         service = {
-          type = "LoadBalancer"
+          type = "ClusterIP"
         }
 
         resources = {
@@ -47,18 +44,6 @@ resource "helm_release" "prometheus" {
       prometheus = {
         prometheusSpec = {
           retention = "1d"
-
-          storageSpec = {
-            volumeClaimTemplate = {
-              spec = {
-                storageClassName = "gp2"
-                accessModes      = ["ReadWriteOnce"]
-                resources = {
-                  requests = { storage = "512Mi" }
-                }
-              }
-            }
-          }
 
           resources = {
             requests = { cpu = "50m", memory = "128Mi" }

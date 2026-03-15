@@ -6,27 +6,20 @@ resource "helm_release" "loki" {
   namespace        = "monitoring"
   create_namespace = true
 
-  # Loki deve subir depois que o namespace já foi criado pelo Prometheus
   depends_on = [helm_release.prometheus]
 
   timeout = 300
+  wait    = false
 
   values = [
     yamlencode({
-      # ==========================================
-      # LOKI
-      # ==========================================
       loki = {
         enabled = true
 
-        # Persistência para não perder logs ao reiniciar o pod
         persistence = {
-          enabled      = true
-          storageClass = "gp2"
-          size         = "512Mi"
+          enabled = false
         }
 
-        # Retenção de logs: 1 dia
         config = {
           limits_config = {
             retention_period = "24h"
@@ -43,13 +36,9 @@ resource "helm_release" "loki" {
         }
       }
 
-      # ==========================================
-      # PROMTAIL — agente coletor de logs nos nodes
-      # ==========================================
       promtail = {
         enabled = true
 
-        # Recursos do DaemonSet do Promtail
         resources = {
           requests = { cpu = "50m", memory = "64Mi" }
           limits   = { cpu = "100m", memory = "128Mi" }
@@ -64,7 +53,6 @@ resource "helm_release" "loki" {
         }
       }
 
-      # Grafana desabilitado aqui — já existe um no kube-prometheus-stack
       grafana = {
         enabled = false
       }
