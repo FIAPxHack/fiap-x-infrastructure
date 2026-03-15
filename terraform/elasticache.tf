@@ -30,7 +30,7 @@ resource "aws_elasticache_subnet_group" "redis" {
 }
 
 resource "aws_elasticache_cluster" "redis" {
-  cluster_id           = "${var.project_name}-redis-${var.environment}"
+  cluster_id           = "${var.project_name}-cache-${var.environment}"
   engine               = "redis"
   engine_version       = "7.1"
   node_type            = "cache.t3.micro"
