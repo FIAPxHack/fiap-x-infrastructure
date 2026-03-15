@@ -25,11 +25,11 @@ spec:
               name: http
           resources:
             requests:
-              cpu: "250m"
-              memory: "512Mi"
+              cpu: "100m"
+              memory: "256Mi"
             limits:
-              cpu: "1000m"
-              memory: "1Gi"
+              cpu: "500m"
+              memory: "512Mi"
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "production"
@@ -42,7 +42,7 @@ spec:
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
             - name: SPRING_DATASOURCE_USERNAME
-              value: "admin"
+              value: "dbadmin"
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
