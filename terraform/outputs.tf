@@ -32,7 +32,7 @@ output "rds_secret_arn" {
 }
 
 output "redis_endpoint" {
-  value = aws_elasticache_serverless_cache.redis.endpoint[0].address
+  value = aws_elasticache_cluster.redis.cache_nodes[0].address
 }
 
 output "rds_auth_endpoint" {

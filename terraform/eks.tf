@@ -125,7 +125,13 @@ resource "aws_iam_openid_connect_provider" "eks" {
 }
 
 resource "aws_eks_addon" "ebs_csi" {
-  cluster_name  = aws_eks_cluster.main.name
-  addon_name    = "aws-ebs-csi-driver"
-  addon_version = "v1.30.0-eksbuild.1"
+  cluster_name                = aws_eks_cluster.main.name
+  addon_name                  = "aws-ebs-csi-driver"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  depends_on = [
+    aws_eks_node_group.main,
+    aws_iam_role_policy_attachment.ebs_csi
+  ]
 }
