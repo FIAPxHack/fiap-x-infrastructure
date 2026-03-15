@@ -87,11 +87,11 @@ jobs:
     with:
       user-image: ${{ needs.build.outputs.user-image }}
       eks-cluster: ${{ needs.infra.outputs.eks-cluster }}
-      rds-endpoint: ${{ steps.tf.outputs.rds_user_endpoint }}
-      rds-secret-arn: ${{ steps.tf.outputs.rds_user_secret_arn }}
+      rds-endpoint: ${{ needs.infra.outputs.rds_user_endpoint }}
+      rds-secret-arn: ${{ needs.infra.outputs.rds_user_secret_arn }}
     secrets: inherit
 
-    deploy-auth:
+  deploy-auth:
     name: Deploy Auth
     needs: [build, infra]
     uses: ./.github/workflows/_deploy-auth.yml
