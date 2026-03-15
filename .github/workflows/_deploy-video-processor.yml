@@ -56,7 +56,7 @@ jobs:
         run: kubectl apply -f k8s/hpa.yaml
 
       - name: Aguardando Rollout
-        run: kubectl rollout status deployment/video-processor --timeout=300s
+        run: kubectl rollout status deployment/video-processor --timeout=600s
 
       - name: Verificando Implantação
         run: |
