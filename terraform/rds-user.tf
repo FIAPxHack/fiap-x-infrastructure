@@ -44,7 +44,7 @@ resource "aws_db_instance" "user" {
   storage_type      = "gp3"
 
   db_name  = "db_fiap_x_user"
-  username = "admin"
+  username = "dbadmin"
 
   manage_master_user_password = true
 
