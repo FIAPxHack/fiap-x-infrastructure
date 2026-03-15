@@ -10,7 +10,7 @@ resource "helm_release" "prometheus" {
   depends_on = [aws_eks_node_group.main]
 
   # Tempo máximo de espera para o deploy estabilizar
-  timeout = 600
+  timeout = 900
 
   values = [
     yamlencode({
@@ -74,8 +74,8 @@ resource "helm_release" "prometheus" {
 
           # Recursos adequados para t3.small
           resources = {
-            requests = { cpu = "200m", memory = "512Mi" }
-            limits   = { cpu = "500m", memory = "1Gi" }
+            requests = { cpu = "100m", memory = "256Mi" }
+            limits   = { cpu = "300m", memory = "512Mi" }
           }
 
           # Permite descobrir ServiceMonitors de qualquer namespace

@@ -134,7 +134,7 @@ jobs:
 
   smoke-tests:
     name: Smoke Tests
-    needs: [deploy-api-gateway]
+    needs: [deploy-api-gateway, deploy-video-manager]
     uses: ./.github/workflows/_smoke-tests.yml
     with:
       manager-url: ${{ needs.deploy-video-manager.outputs.manager-url }}
