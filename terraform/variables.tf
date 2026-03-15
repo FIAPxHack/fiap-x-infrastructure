@@ -27,9 +27,3 @@ variable "eks_node_desired" {
   type        = number
   default     = 2
 }
-
-variable "grafana_admin_password" {
-  description = "Senha do usuário admin do Grafana (não use default aqui, passe via -var ou arquivo .tfvars)"
-  type        = string
-  sensitive   = true
-}
