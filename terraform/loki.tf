@@ -23,17 +23,17 @@ resource "helm_release" "loki" {
         persistence = {
           enabled      = true
           storageClass = "gp2"
-          size         = "10Gi"
+          size         = "512Mi"
         }
 
-        # Retenção de logs: 7 dias
+        # Retenção de logs: 1 dia
         config = {
           limits_config = {
-            retention_period = "168h"
+            retention_period = "24h"
           }
           table_manager = {
             retention_deletes_enabled = true
-            retention_period          = "168h"
+            retention_period          = "24h"
           }
         }
 
