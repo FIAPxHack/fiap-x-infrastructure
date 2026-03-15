@@ -7,6 +7,14 @@ on:
         value: ${{ jobs.containers.outputs.video-processor }}
       video-manager-image:
         value: ${{ jobs.containers.outputs.video-manager }}
+      user-image:
+        value: ${{ jobs.containers.outputs.user }}
+      auth-image:
+        value: ${{ jobs.containers.outputs.auth }}
+      notification-image:
+        value: ${{ jobs.containers.outputs.notification }}
+      api-gateway-image:
+        value: ${{ jobs.containers.outputs.api-gateway }}
 
 jobs:
   detect-changes:
@@ -15,6 +23,10 @@ jobs:
     outputs:
       video-processor: ${{ steps.changes.outputs.video-processor }}
       video-manager: ${{ steps.changes.outputs.video-manager }}
+      user: ${{ steps.changes.outputs.user }}
+      auth: ${{ steps.changes.outputs.auth }}
+      notification: ${{ steps.changes.outputs.notification }}
+      api-gateway: ${{ steps.changes.outputs.api-gateway }}
     steps:
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -38,6 +50,30 @@ jobs:
             echo "video-manager=true" >> $GITHUB_OUTPUT
           fi
 
+          if aws ecr describe-images --repository-name fiapx-user --region us-east-1 --image-ids imageTag=${{ github.sha }} 2>/dev/null; then
+            echo "user=false" >> $GITHUB_OUTPUT
+          else
+            echo "user=true" >> $GITHUB_OUTPUT
+          fi
+
+          if aws ecr describe-images --repository-name fiapx-auth --region us-east-1 --image-ids imageTag=${{ github.sha }} 2>/dev/null; then
+            echo "auth=false" >> $GITHUB_OUTPUT
+          else
+            echo "auth=true" >> $GITHUB_OUTPUT
+          fi
+
+          if aws ecr describe-images --repository-name fiapx-notification --region us-east-1 --image-ids imageTag=${{ github.sha }} 2>/dev/null; then
+            echo "notification=false" >> $GITHUB_OUTPUT
+          else
+            echo "notification=true" >> $GITHUB_OUTPUT
+          fi
+
+          if aws ecr describe-images --repository-name fiapx-api-gateway --region us-east-1 --image-ids imageTag=${{ github.sha }} 2>/dev/null; then
+            echo "api-gateway=false" >> $GITHUB_OUTPUT
+          else
+            echo "api-gateway=true" >> $GITHUB_OUTPUT
+          fi
+
   containers:
     name: Container Images
     runs-on: ubuntu-latest
@@ -45,6 +81,10 @@ jobs:
     outputs:
       video-processor: ${{ steps.images.outputs.video-processor }}
       video-manager: ${{ steps.images.outputs.video-manager }}
+      user: ${{ steps.images.outputs.user }}
+      auth: ${{ steps.images.outputs.auth }}
+      notification: ${{ steps.images.outputs.notification }}
+      api-gateway: ${{ steps.images.outputs.api-gateway }}
 
     steps:
       - name: Configure AWS
@@ -94,6 +134,78 @@ jobs:
           docker push ${{ steps.ecr.outputs.registry }}/fiapx-video-manager:${{ github.sha }}
           docker push ${{ steps.ecr.outputs.registry }}/fiapx-video-manager:latest
 
+      # --- USER ---
+      - name: Checkout User
+        if: needs.detect-changes.outputs.user == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/fiap-x-microsservice-user
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: user
+
+      - name: Build & Push User
+        if: needs.detect-changes.outputs.user == 'true'
+        run: |
+          docker build -t ${{ steps.ecr.outputs.registry }}/fiapx-user:${{ github.sha }} \
+                        -t ${{ steps.ecr.outputs.registry }}/fiapx-user:latest \
+                        ./user
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-user:${{ github.sha }}
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-user:latest
+
+      # --- AUTH ---
+      - name: Checkout Auth
+        if: needs.detect-changes.outputs.auth == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/fiap-x-microsservice-auth
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: auth
+
+      - name: Build & Push Auth
+        if: needs.detect-changes.outputs.auth == 'true'
+        run: |
+          docker build -t ${{ steps.ecr.outputs.registry }}/fiapx-auth:${{ github.sha }} \
+                        -t ${{ steps.ecr.outputs.registry }}/fiapx-auth:latest \
+                        ./auth
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-auth:${{ github.sha }}
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-auth:latest
+
+      # --- NOTIFICATION ---
+      - name: Checkout Notification
+        if: needs.detect-changes.outputs.notification == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/fiap-x-microservice-notification
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: notification
+
+      - name: Build & Push Notification
+        if: needs.detect-changes.outputs.notification == 'true'
+        run: |
+          docker build -t ${{ steps.ecr.outputs.registry }}/fiapx-notification:${{ github.sha }} \
+                        -t ${{ steps.ecr.outputs.registry }}/fiapx-notification:latest \
+                        ./notification
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-notification:${{ github.sha }}
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-notification:latest
+
+      # --- API GATEWAY ---
+      - name: Checkout API Gateway
+        if: needs.detect-changes.outputs.api-gateway == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/fiap-x-api-gateway
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: api-gateway
+
+      - name: Build & Push API Gateway
+        if: needs.detect-changes.outputs.api-gateway == 'true'
+        run: |
+          docker build -t ${{ steps.ecr.outputs.registry }}/fiapx-api-gateway:${{ github.sha }} \
+                        -t ${{ steps.ecr.outputs.registry }}/fiapx-api-gateway:latest \
+                        ./api-gateway
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-api-gateway:${{ github.sha }}
+          docker push ${{ steps.ecr.outputs.registry }}/fiapx-api-gateway:latest
+
       - name: Set Image Outputs
         id: images
         run: |
@@ -101,3 +213,7 @@ jobs:
           SHA=${{ github.sha }}
           echo "video-processor=${REGISTRY}/fiapx-video-worker:${SHA}" >> $GITHUB_OUTPUT
           echo "video-manager=${REGISTRY}/fiapx-video-manager:${SHA}" >> $GITHUB_OUTPUT
+          echo "user=${REGISTRY}/fiapx-user:${SHA}" >> $GITHUB_OUTPUT
+          echo "auth=${REGISTRY}/fiapx-auth:${SHA}" >> $GITHUB_OUTPUT
+          echo "notification=${REGISTRY}/fiapx-notification:${SHA}" >> $GITHUB_OUTPUT
+          echo "api-gateway=${REGISTRY}/fiapx-api-gateway:${SHA}" >> $GITHUB_OUTPUT

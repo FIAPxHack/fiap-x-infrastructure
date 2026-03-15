@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: default
+  labels:
+    app: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: gateway
+        image: ${GATEWAY_IMAGE}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        - name: USER_SERVICE_URL
+          value: "http://fiap-x-user:80"
+        - name: VIDEO_PROCESSOR_SERVICE_URL
+          value: "http://video-processor:80"
+        - name: VIDEO_MANAGER_SERVICE_URL
+          value: "http://video-manager:80"
+        - name: AUTH_SERVICE_URL
+          value: "http://fiap-x-auth:80"
+        - name: NOTIFICATION_SERVICE_URL
+          value: "http://fiap-x-notification:80"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: gateway-secrets
+              key: JWT_SECRET
+        - name: JWT_ISSUER
+          value: "ManaFood"
+        - name: JWT_AUDIENCE
+          value: "ManaFoodUsers"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: default
+  labels:
+    app: api-gateway
+spec:
+  selector:
+    app: api-gateway
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-routes-config
+  namespace: default
+data:
+  USER_SERVICE_URL: "http://fiap-x-user:80"
+  VIDEO_PROCESSOR_SERVICE_URL: "http://video-processor:80"
+  VIDEO_MANAGER_SERVICE_URL: "http://video-manager:80"
+  AUTH_SERVICE_URL: "http://fiap-x-auth:80"
+  NOTIFICATION_SERVICE_URL: "http://fiap-x-notification:80"

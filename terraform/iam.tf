@@ -110,3 +110,120 @@ resource "aws_iam_role_policy" "video_manager" {
     ]
   })
 }
+
+# ==========================================
+# USER - IAM Role 
+# ==========================================
+resource "aws_iam_role" "user" {
+  name = "${var.project_name}-user-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = local.oidc_provider_arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_provider}:aud" = "sts.amazonaws.com"
+          "${local.oidc_provider}:sub" = "system:serviceaccount:default:fiap-x-user-sa"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "user" {
+  name = "${var.project_name}-user-policy"
+  role = aws_iam_role.user.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = [aws_db_instance.user.master_user_secret[0].secret_arn]
+      }
+    ]
+  })
+}
+
+# ==========================================
+# AUTH - IAM Role
+# ==========================================
+resource "aws_iam_role" "auth" {
+  name = "${var.project_name}-auth-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = local.oidc_provider_arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_provider}:aud" = "sts.amazonaws.com"
+          "${local.oidc_provider}:sub" = "system:serviceaccount:default:fiap-x-auth-sa"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "auth" {
+  name = "${var.project_name}-auth-policy"
+  role = aws_iam_role.auth.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = [aws_db_instance.auth.master_user_secret[0].secret_arn]
+      }
+    ]
+  })
+}
+
+# ==========================================
+# NOTIFICATION 
+# ==========================================
+resource "aws_iam_role" "notification" {
+  name = "${var.project_name}-notification-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = local.oidc_provider_arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_provider}:aud" = "sts.amazonaws.com"
+          "${local.oidc_provider}:sub" = "system:serviceaccount:default:fiap-x-notification-sa"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "notification" {
+  name = "${var.project_name}-notification-policy"
+  role = aws_iam_role.notification.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish",
+          "sqs:SendMessage"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}

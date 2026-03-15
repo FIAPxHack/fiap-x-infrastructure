@@ -35,6 +35,22 @@ output "redis_endpoint" {
   value = aws_elasticache_serverless_cache.redis.endpoint[0].address
 }
 
+output "rds_auth_endpoint" {
+  value = aws_db_instance.auth.address
+}
+
+output "rds_auth_secret_arn" {
+  value = aws_db_instance.auth.master_user_secret[0].secret_arn
+}
+
+output "rds_user_endpoint" {
+  value = aws_db_instance.user.address
+}
+
+output "rds_user_secret_arn" {
+  value = aws_db_instance.user.master_user_secret[0].secret_arn
+}
+
 output "video_processor_role_arn" {
   value = aws_iam_role.video_processor.arn
 }
