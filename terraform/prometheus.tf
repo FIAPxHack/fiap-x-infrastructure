@@ -62,26 +62,26 @@ resource "helm_release" "prometheus" {
             limits   = { cpu = "50m", memory = "64Mi" }
           }
         }
-      }
 
-      prometheusOperator = {
-        resources = {
-          requests = { cpu = "25m", memory = "32Mi" }
-          limits   = { cpu = "100m", memory = "64Mi" }
+        prometheusOperator = {
+          resources = {
+            requests = { cpu = "25m", memory = "32Mi" }
+            limits   = { cpu = "100m", memory = "64Mi" }
+          }
         }
-      }
 
-      kube-state-metrics = {
-        resources = {
-          requests = { cpu = "10m", memory = "32Mi" }
-          limits   = { cpu = "50m", memory = "64Mi" }
+        kube-state-metrics = {
+          resources = {
+            requests = { cpu = "10m", memory = "32Mi" }
+            limits   = { cpu = "50m", memory = "64Mi" }
+          }
         }
-      }
 
-      prometheus-node-exporter = {
-        resources = {
-          requests = { cpu = "10m", memory = "16Mi" }
-          limits   = { cpu = "50m", memory = "32Mi" }
+        prometheus-node-exporter = {
+          resources = {
+            requests = { cpu = "10m", memory = "16Mi" }
+            limits   = { cpu = "50m", memory = "32Mi" }
+          }
         }
       }
     })
