@@ -25,5 +25,5 @@ variable "eks_node_instance_type" {
 variable "eks_node_desired" {
   description = "Número desejado de nodes"
   type        = number
-  default     = 2
+  default     = 5
 }
